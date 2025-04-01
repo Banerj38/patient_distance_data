@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Patient Distance and Demography Analysis</title>
+
+    <!-- Material UI & Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://unpkg.com/@mui/material@5.0.0/dist/material.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #68C7FF;
+            color: #004B84;
+            height: 100%;
+        }
+
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: 100%;
+        }
+
+        h1 {
+            margin-left: 20px;
+            text-align: left;
+        }
+
+        form {
+            display: flex;
+            justify-content: flex-start;
+            gap: 15px;
+            margin-left: 20px;
+            margin-bottom: 50px;
+        }
+
+        .result-container {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            margin-left: 20px;
+            margin-top: 20px;
+            width: 100%;
+            height: 500px;
+        }
+
+        .result {
+            width: 52%;
+            min-width: 52px;
+            max-width: 600px;
+            height: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            color: #004B84;
+            font-size: 11px; /* Reduced font size */
+            line-height: 1.2; /* Reduced line spacing */
+            overflow-y: hidden; /* Remove scrollbar */
+        }
+
+        .result h3, .result h4 {
+            font-size: 13px;
+            margin-bottom: 3px; /* Reduced space below headers */
+        }
+
+        .result ul {
+            padding: 0;
+            margin: 0;
+        }
+
+        .result ul li {
+            font-size: 11px;
+            margin-bottom: 1px; /* Reduced space between list items */
+        }
+
+        .demographics-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .demographics-column {
+            flex: 1;
+            padding: 5px;
+        }
+
+        .demographics-column p {
+            margin: 1px 0; /* Reduced spacing between demographics data */
+            font-size: 11px;
+        }
+
+        .demographics-column strong {
+            font-size: 12px;
+        }
+
+        .map-container {
+            width: 45%;
+            max-width: 800px;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            form {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .result-container {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .result {
+                width: 100%;
+                margin-bottom: 20px;
+            }
+
+            .map-container {
+                width: 100%;
+                margin-top: 20px;
+            }
+
+            .demographics-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .demographics-column {
+                flex: none;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 20px;
+                text-align: center;
+            }
+
+            form {
+                width: 100%;
+                margin-left: 0;
+                padding: 0 10px;
+            }
+
+            .result-container {
+                flex-direction: column;
+            }
+
+            .result {
+                width: 100%;
+            }
+
+            .demographics-column p,
+            .result h3,
+            .result h4,
+            .result ul li {
+                font-size: 10px;
+            }
+
+            .map-container {
+                width: 100%;
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>A Patient Distance and Demography Analysis</h1>
+
+        <form id="analyzeForm">
+            <div class="organization-box">
+                <select id="organization" name="organization_id" required>
+                    <option value="">Select Organization</option>
+                    {% for org in organizations %}
+                    <option value="{{ org.oid }}">{{ org.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="year-box">
+                <select id="year" name="year" required>
+                    <option value="">Select Year</option>
+                    {% for year in years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="analyze-button">Analyze</button>
+        </form>
+
+        <div class="result-container" id="result" style="display: none;">
+            <div class="result">
+                <h3>Results for: <span id="orgName"></span></h3>
+                <p><strong>Organization Address:</strong> <span id="orgAddress"></span></p>
+                <p><strong>Total Unique Patients visiting the Selected Organization:</strong> <span id="totalPatients"></span></p>
+                <p><strong>Total Patients within 10 miles:</strong> <span id="patientsWithin10Miles"></span></p>
+                <p><strong>Total Patients within 10 miles visiting the Selected Organization:</strong> <span id="patientsVisitingOrg"></span></p>
+
+                <h4>Patient Distribution by Distance Category</h4>
+                <ul id="patientsByCategory"></ul>
+
+                <h4>Demographics (≤10 miles)</h4>
+                <div class="demographics-container">
+                    <div class="demographics-column">
+                        <strong>Race:</strong>
+                        <p id="raceDistribution"></p>
+                    </div>
+
+                    <div class="demographics-column">
+                        <strong>Gender:</strong>
+                        <p id="genderDistribution"></p>
+                        <strong>Avg Age:</strong>
+                        <p id="averageAge"></p>
+                    </div>
+                </div>
+
+                <h4>Demographics (≤10 miles visiting the  Selected Organization)</h4>
+                <div class="demographics-container">
+                    <div class="demographics-column">
+                        <strong>Race:</strong>
+                        <p id="raceDistributionOrg"></p>
+                    </div>
+
+                    <div class="demographics-column">
+                        <strong>Gender:</strong>
+                        <p id="genderDistributionOrg"></p>
+                        <strong>Avg Age:</strong>
+                        <p id="averageAgeOrg"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $('#analyzeForm').submit(function(event) {
+            event.preventDefault();
+
+            var formData = {
+                organization_id: $('#organization').val(),
+                year: $('#year').val()
+            };
+
+            $.ajax({
+                url: '/analyze',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function(response) {
+                    $('#orgName').text(response.organization_name);
+                    $('#orgAddress').text(response.organization_address);
+                    $('#totalPatients').text(response.total_unique_patients);
+                    $('#patientsWithin10Miles').text(response.total_patients_within_10_miles);
+                    $('#patientsVisitingOrg').text(response.total_patients_visiting_selected_org);
+
+                    var categoryList = $('#patientsByCategory');
+                    categoryList.empty();
+                    for (var category in response.patient_inflow_by_category) {
+                        categoryList.append('<li>' + category + ': ' + response.patient_inflow_by_category[category] + ' patients</li>');
+                    }
+
+                    $('#raceDistribution').html(Object.entries(response.demographics_category_1.race_distribution || {}).map(([key, value]) => `${key}: ${value}`).join('<br>'));
+                    $('#genderDistribution').html(Object.entries(response.demographics_category_1.gender_distribution || {}).map(([key, value]) => `${key}: ${value}`).join('<br>'));
+                    $('#averageAge').text(response.demographics_category_1.average_age);
+
+                    $('#raceDistributionOrg').html(Object.entries(response.demographics_category_1_selected_org.race_distribution || {}).map(([key, value]) => `${key}: ${value}`).join('<br>'));
+                    $('#genderDistributionOrg').html(Object.entries(response.demographics_category_1_selected_org.gender_distribution || {}).map(([key, value]) => `${key}: ${value}`).join('<br>'));
+                    $('#averageAgeOrg').text(response.demographics_category_1_selected_org.average_age);
+
+                    $('#map').html(response.map_html);
+                    $('#result').show();
+                },
+                error: function() {
+                    alert('Error: Data not available for the selected year.');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
